@@ -18,9 +18,9 @@ For more information, visit: https://github.com/baaziznasser/qurani
 #code start here
 
 
-import os
-import sqlite3
+import sqlite3 # Removed import os
 from typing import List, Dict, Union
+from pathlib import Path # Added Path import
 from core_functions.ayah_data import AyahData
 from utils.settings import SettingsManager
 from utils.const import data_folder
@@ -64,12 +64,21 @@ class quran_mgr:
         self.text = ""
         self.ayah_data = None
         
-    def load_quran(self, db_file: Union[str, int]):
-        db_file = QuranConst.databases[db_file] if isinstance(db_file, int) else db_file
-        if not os.path.isfile(db_file):
-            raise DBNotFoundError(db_file)
+    def load_quran(self, db_file: Union[str, Path, int]): # db_file can now also be Path
+        # Resolve db_file to a Path object
+        if isinstance(db_file, int):
+            db_file_path = QuranConst.databases[db_file] # This is already a Path object
+        elif isinstance(db_file, str):
+            db_file_path = Path(db_file)
+        elif isinstance(db_file, Path):
+            db_file_path = db_file
+        else:
+            raise TypeError(f"Unsupported type for db_file: {type(db_file)}")
+
+        if not db_file_path.is_file():
+            raise DBNotFoundError(str(db_file_path)) # Pass string to exception
         
-        self.conn = sqlite3.connect(db_file)
+        self.conn = sqlite3.connect(db_file_path) # sqlite3.connect can handle Path objects
         self.cursor = self.conn.cursor()
         QuranConst.SURAS = self.get_suras()
 

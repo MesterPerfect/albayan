@@ -11,7 +11,7 @@ from ui.quran_interface import QuranInterface
 from core_functions.athkar.athkar_scheduler import AthkarScheduler
 from utils.update import UpdateManager
 from utils.settings import SettingsManager
-from utils.const import program_name, program_icon, user_db_path
+from utils.const import program_name, program_icon, user_db_path, APP_ROOT # Added APP_ROOT
 from utils.logger import Logger
 from utils.audio_player import StartupSoundEffectPlayer, VolumeController
 
@@ -108,7 +108,7 @@ class SingleInstanceApplication(QApplication):
 
 def call_after_starting(parent: QuranInterface) -> None:
         
-    basmala = StartupSoundEffectPlayer("Audio/basmala")
+    basmala = StartupSoundEffectPlayer(APP_ROOT / "Audio" / "basmala")
     basmala.play()
 
     check_update_enabled = SettingsManager.current_settings["general"].get("check_update_enabled", False)

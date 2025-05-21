@@ -1,7 +1,8 @@
 import os
 import time
 import ctypes
-from typing import List, Optional
+from typing import List, Optional, Union # Added Union
+from pathlib import Path # Added Path
 from urllib.parse import urlparse
 from .status import PlaybackStatus
 from .bass_init import BassInitializer, BassFlag
@@ -17,46 +18,54 @@ class AudioPlayer:
     instances = []
 
     def __init__(self, volume: float, flag: int = BassFlag.AUTO_FREE) -> None:
-        self.source: Optional[str] = None
+        self.source: Optional[Union[str, Path]] = None # Updated type hint for source
         self.current_channel: Optional[int] = None
         self.volume = volume
         self.supported_extensions = ('.wav', '.mp3', '.ogg')
         self.flag = flag
         AudioPlayer.instances.append(self)
     
-    def load_audio(self, source: str, attempts: Optional[int] = 3) -> None:
+    def load_audio(self, source: Union[str, Path], attempts: Optional[int] = 3) -> None: # Updated type hint for source
         """Loads an audio file or a URL for playback."""
 
         # Stop and release the previous file
         if self.current_channel:
             self.stop()  
 
-        if not isinstance(source, str) or not source:
-            raise InvalidSourceError(source)
+        if not source: # Simplified check for empty source
+            raise InvalidSourceError(str(source)) # Convert to string for error
 
-        file_name, file_extension = os.path.splitext(source)
-        if file_extension.lower() not in self.supported_extensions:
-            raise UnsupportedFormatError(file_extension)
+        source_as_str = str(source) # For URL parsing and BASS functions if it's a string URL
 
-        parsed_url = urlparse(source)
+        # Check if source is a URL first
+        parsed_url = urlparse(source_as_str)
         if parsed_url.scheme in ("http", "https") and parsed_url.netloc:
             # Stream from URL
+            if not isinstance(source, str): # BASS_StreamCreateURL expects a string
+                 raise InvalidSourceError(f"URL source must be a string, got {type(source)}")
             self.current_channel = bass.BASS_StreamCreateURL(source.encode(), 0, self.flag, None, None)
+            self.source = source # Store original URL string
         else:
-            # Load from local file
-            if not os.path.isfile(source):
-                raise AudioFileNotFoundError(source)
-            self.current_channel = bass.BASS_StreamCreateFile(False, source.encode('utf-8'), 0, 0, self.flag)
+            # Load from local file (source should be Path or string convertible to Path)
+            source_path = Path(source) # Ensure source is a Path object
+            if not source_path.is_file():
+                raise AudioFileNotFoundError(str(source_path))
+
+            file_extension = source_path.suffix
+            if file_extension.lower() not in self.supported_extensions:
+                raise UnsupportedFormatError(file_extension)
+            
+            self.current_channel = bass.BASS_StreamCreateFile(False, str(source_path).encode('utf-8'), 0, 0, self.flag)
+            self.source = source_path # Store Path object
 
         if not self.current_channel:
             if attempts:
-                print(f"Trying too load: {source}.")
+                print(f"Trying to load: {str(source)}.") # Use str(source) for printing
                 time.sleep(0.1)
-                return self.load_audio(source, attempts - 1)
-            raise LoadFileError(source)
+                return self.load_audio(source, attempts - 1) # Pass original source
+            raise LoadFileError(str(source)) # Convert to string for error
         
-        self.source = source
-        self.set_volume(self.volume) 
+        self.set_volume(self.volume)
     
     def play(self) -> None:
         """Plays the currently loaded audio."""

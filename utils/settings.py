@@ -1,10 +1,9 @@
-import os
-import configparser
+import configparser # Removed import os
 from utils.const import albayan_folder
 
 
 class SettingsManager:
-    path = os.path.join(albayan_folder, "config.ini")
+    path = albayan_folder / "config.ini" # Changed to use / operator
     config = configparser.ConfigParser()
 
     default_settings = {

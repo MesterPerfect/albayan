@@ -1,8 +1,8 @@
 import logging
 import traceback
-import os
-import ctypes
+import ctypes # Removed import os
 import sys
+from pathlib import Path # Added Path import
 from utils.settings import SettingsManager
 from utils.const import albayan_folder
 
@@ -18,10 +18,12 @@ class Logger:
                 mode = "a"
             else:
                 mode = "w"
-            logging.basicConfig(filename=os.path.join(albayan_folder, "albayan.log"),
-level=logging.INFO,
-                    filemode=mode,
-                    format="(%(asctime)s) | %(name)s | %(levelname)s => '%(message)s'")
+            # Ensure albayan_folder is a Path object, which it should be from const.py
+            log_file_path = albayan_folder / "albayan.log"
+            logging.basicConfig(filename=log_file_path, # Used Path object
+                                level=logging.INFO,
+                                filemode=mode,
+                                format="(%(asctime)s) | %(name)s | %(levelname)s => '%(message)s'")
         cls.last_logging_status = current_logging_status
 
     @classmethod
@@ -44,10 +46,10 @@ level=logging.INFO,
         tb_list = traceback.extract_tb(tb)
         error_message = "Exception Type: {} | ".format(exctype.__name__)
 
-        for tb in tb_list:
-            file_name = os.path.basename(tb.filename)
-            line_number = tb.lineno
-            code = tb.line
+        for tb_item in tb_list: # Renamed tb to tb_item to avoid conflict with traceback module
+            file_name = Path(tb_item.filename).name # Used Path(tb.filename).name
+            line_number = tb_item.lineno
+            code = tb_item.line
 
             error_message += "File: {} | Line: {} | Code: {} | ".format(file_name, line_number, code)
 
